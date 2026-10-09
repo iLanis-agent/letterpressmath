@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Letterpress math - the app</title>
+<style>
+  :root { --ink:#26242a; --bg:#f4f2ee; --card:#fff; --accent:#4a3f5c; --accent2:#5b4f70; --soft:#e2dcea; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); padding:18px; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .lede { text-align:center; color:#565064; margin:6px 0 16px; font-size:15px; max-width:760px; margin-left:auto; margin-right:auto; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; }
+  .card { background:var(--card); border-radius:14px; padding:22px; box-shadow:0 1px 3px rgba(50,40,70,.08); }
+  h2 { font-size:19px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:#655e74; margin:10px 0 4px; }
+  input { width:100%; padding:9px 10px; border:1px solid #c9c2d4; border-radius:8px; font-size:15px; background:#fcfbfe; }
+  button { width:100%; margin-top:16px; padding:12px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover { background:var(--accent2); }
+  .big { font-size:34px; font-weight:700; margin:14px 0 2px; }
+  .cap { font-size:13px; color:#655e74; }
+  .pill { display:inline-block; margin-top:10px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600; }
+  .pill.type { background:var(--soft); color:var(--accent); }
+  table { width:100%; margin-top:12px; border-collapse:collapse; font-size:14px; }
+  td { padding:7px 0; border-bottom:1px solid #ddd7e6; }
+  td:last-child { text-align:right; font-weight:600; }
+  .err { color:#a3341f; font-size:14px; margin-top:10px; }
+  .foot { margin-top:20px; font-size:12.5px; color:#6f6880; line-height:1.6; }
+  .foot a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="lede">A letterpress page is a fixed depth of metal, a sheet is a fixed field of paper, and ink is a film measured in milligrams. All three are arithmetic.</p>
+  <div class="cards">
+    <div class="card">
+      <h2>Cast the lines</h2>
+      <label for="t_d">Page depth (mm)</label>
+      <input id="t_d" type="number" value="250" min="0" step="5">
+      <label for="t_s">Type size (pt)</label>
+      <input id="t_s" type="number" value="12" min="0" step="0.5">
+      <label for="t_l">Leading (pt - +2 is a labeled norm)</label>
+      <input id="t_l" type="number" value="2" min="0" step="0.5">
+      <button id="t_go">Count the lines</button>
+      <div class="big" id="t_out">-</div>
+      <div class="cap">lines that fit</div>
+      <table id="t_rows" style="display:none">
+        <tr><td>type depth used</td><td id="t_used">-</td></tr>
+        <tr><td>leftover</td><td id="t_left">-</td></tr>
+      </table>
+      <div class="pill type" id="t_verdict" style="display:none"></div>
+      <div class="err" id="t_err"></div>
+    </div>
+    <div class="card">
+      <h2>Cut the sheet</h2>
+      <label for="c_sw">Sheet width (mm)</label>
+      <input id="c_sw" type="number" value="450" min="0" step="10">
+      <label for="c_sh">Sheet height (mm)</label>
+      <input id="c_sh" type="number" value="320" min="0" step="10">
+      <label for="c_cw">Card width (mm)</label>
+      <input id="c_cw" type="number" value="85" min="0" step="5">
+      <label for="c_ch">Card height (mm)</label>
+      <input id="c_ch" type="number" value="55" min="0" step="5">
+      <button id="c_go">Plan the cut</button>
+      <div class="big" id="c_out">-</div>
+      <div class="cap">cards per sheet</div>
+      <div class="pill type" id="c_verdict" style="display:none"></div>
+      <table id="c_rows" style="display:none">
+        <tr><td>waste</td><td id="c_waste">-</td></tr>
+      </table>
+      <div class="err" id="c_err"></div>
+    </div>
+    <div class="card">
+      <h2>Ink the run</h2>
+      <label for="i_n">Impressions</label>
+      <input id="i_n" type="number" value="500" min="1" step="50">
+      <label for="i_a">Printed area per piece (cm2)</label>
+      <input id="i_a" type="number" value="50" min="0" step="5">
+      <label for="i_c">Coverage (%)</label>
+      <input id="i_c" type="number" value="30" min="0" max="100" step="5">
+      <button id="i_go">Weigh the ink</button>
+      <div class="big" id="i_out">-</div>
+      <div class="cap">ink (g, labeled estimate)</div>
+      <div class="pill type" id="i_verdict" style="display:none"></div>
+      <div class="err" id="i_err"></div>
+    </div>
+  </div>
+  <p class="foot">Exact arithmetic: pitch = (size + leading) x 25.4/72 mm; cutting takes the better orientation; ink at a labeled 0.4 g per 1000 full-coverage cm2-impressions. The bands are flagged craft norms - ink, paper and press vary, and this measures nothing about your shop. <a href="index.html">Why this exists</a></p>
+</div>
+<script src="engine.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const g = id => parseFloat($(id).value);
+document.getElementById('t_go').onclick = () => {
+  $('t_err').textContent = '';
+  try {
+    const r = Letterpressmath.lines(g('t_d'), g('t_s'), g('t_l'));
+    $('t_out').textContent = r.lines;
+    $('t_used').textContent = r.usedMm + ' mm';
+    $('t_left').textContent = r.leftMm + ' mm';
+    $('t_rows').style.display = 'table';
+    const v = $('t_verdict'); v.textContent = r.verdict; v.style.display = 'inline-block';
+  } catch (e) { $('t_err').textContent = e.message; }
+};
+document.getElementById('c_go').onclick = () => {
+  $('c_err').textContent = '';
+  try {
+    const r = Letterpressmath.cut(g('c_sw'), g('c_sh'), g('c_cw'), g('c_ch'));
+    $('c_out').textContent = r.count;
+    $('c_waste').textContent = r.wastePct + '%';
+    $('c_rows').style.display = 'table';
+    const v = $('c_verdict'); v.textContent = r.verdict; v.style.display = 'inline-block';
+  } catch (e) { $('c_err').textContent = e.message; }
+};
+document.getElementById('i_go').onclick = () => {
+  $('i_err').textContent = '';
+  try {
+    const r = Letterpressmath.ink(g('i_n'), g('i_a'), g('i_c'));
+    $('i_out').textContent = r.inkG + ' g';
+    const v = $('i_verdict'); v.textContent = r.verdict; v.style.display = 'inline-block';
+  } catch (e) { $('i_err').textContent = e.message; }
+};
+</script>
+</body>
+</html>
